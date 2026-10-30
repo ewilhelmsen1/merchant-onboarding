@@ -1,0 +1,114 @@
+# Technologent Developer Portal: "Register existing component" example
+#
+# An existing service that was built before the portal: no golden path, no Terraform from the platform.
+# Registering this one file makes the portal aware of it, its API, its owner and its dependencies.
+#
+# How to use in the demo:
+#   1. Commit this file as catalog-info.yaml at the root of a PUBLIC GitHub repository
+#      (the live Backstage reads public github.com URLs without a token).
+#   2. In Backstage: Create -> "Register Existing Component" -> paste the file's URL, e.g.
+#      https://github.com/ewilhelmsen1/merchant-onboarding/blob/main/catalog-info.yaml
+#   3. Analyze -> Import. Open the component: owner, system, API, labels, links and the
+#      dependency graph (to the Payment API and the Cloud Run platform) appear immediately.
+#
+# Owner, system and dependency names below already exist in the live catalog, so every link resolves.
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: merchant-onboarding
+  title: Merchant Onboarding Service
+  description: >-
+    Onboards new merchants: KYC checks, bank account verification and payout setup.
+    Built before the developer portal existed and registered into the catalog as-is.
+  labels:
+    owner: payments-team
+    business_unit: payments
+    department_name: payments-engineering
+    application: merchant-onboarding
+    department_number: '2040'
+    environment: prod
+  annotations:
+    github.com/project-slug: ewilhelmsen1/merchant-onboarding
+    technologent.com/project: idp-demo-environment
+    technologent.com/registered-by: platform-engineering
+    technologent.com/onboarding: registered-existing
+  tags:
+    - python
+    - payments
+    - cloud-run
+    - brownfield
+  links:
+    - url: https://console.cloud.google.com/run?project=idp-demo-environment
+      title: Cloud Run console
+      icon: cloud
+    - url: https://console.cloud.google.com/monitoring?project=idp-demo-environment
+      title: Service dashboard
+      icon: dashboard
+    - url: https://github.com/ewilhelmsen1/merchant-onboarding/blob/main/README.md
+      title: Repository README
+      icon: docs
+spec:
+  type: service
+  lifecycle: production
+  owner: group:payments-team
+  system: payments
+  providesApis:
+    - merchant-onboarding-api
+  dependsOn:
+    - component:default/payment-api
+    - resource:default/cloud-run-us-central1
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: merchant-onboarding-api
+  title: Merchant Onboarding API
+  description: REST API used by the storefront and back office to onboard merchants.
+  labels:
+    owner: payments-team
+    business_unit: payments
+    department_name: payments-engineering
+    application: merchant-onboarding
+    department_number: '2040'
+    environment: prod
+  tags:
+    - rest
+    - payments
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:payments-team
+  system: payments
+  definition: |
+    openapi: 3.0.3
+    info:
+      title: Merchant Onboarding API
+      version: 1.4.0
+      description: Create merchants, run KYC and set up payouts.
+    paths:
+      /merchants:
+        post:
+          summary: Start onboarding a new merchant
+          responses:
+            '201': {description: Merchant created, KYC started}
+      /merchants/{id}:
+        get:
+          summary: Get a merchant and its onboarding status
+          parameters:
+            - {name: id, in: path, required: true, schema: {type: string}}
+          responses:
+            '200': {description: Merchant found}
+            '404': {description: Not found}
+      /merchants/{id}/payout-account:
+        put:
+          summary: Verify and attach the merchant's bank account for payouts
+          parameters:
+            - {name: id, in: path, required: true, schema: {type: string}}
+          responses:
+            '204': {description: Payout account verified}
+      /health:
+        get:
+          summary: Health check
+          responses:
+            '200': {description: OK}
